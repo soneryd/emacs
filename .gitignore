@@ -1,5 +1,7 @@
-/init.el~
-/eshell/
-/elpa/
-/auto-save-list/
-/transient/
+# Ignore everything
+*
+
+# Except for
+!.gitignore
+!settings.org
+!init.el

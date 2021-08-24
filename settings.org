@@ -1,0 +1,52 @@
+* General
+** User Interface
+#+BEGIN_SRC emacs-lisp
+  (setq inhibit-startup-message t) ;; Inhibit startup
+  (scroll-bar-mode 0) ;; No scrollbars
+  (tool-bar-mode 0) ;; No toolbar
+  (menu-bar-mode 0) ;; No menubar
+  (setq visual-bell t) ;; No yelling please
+  (set-fringe-mode 10) ;; Breathing room
+  ;; Load theme settings
+  (load-theme 'wombat)
+#+END_SRC
+
+** Package Sources
+#+BEGIN_SRC emacs-lisp
+  ;; Initialize package sources
+  (require 'package)
+  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
+			   ("org" . "https://orgmode.org/elpa/")
+			   ("elpa" . "https://elpa.gnu.org/packages")))
+  
+  (package-initialize)
+  (unless package-archive-contents
+    (package-refresh-contents))
+  
+  ;; Initialze use-package
+  (unless (package-installed-p 'use-package)
+    (package-install 'use-package))
+  
+  (require 'use-package)
+  (setq use-package-always-ensure t)
+#+END_SRC
+** Modeline
+#+BEGIN_SRC emacs-lisp
+  (use-package doom-modeline
+    :init (doom-modeline-mode 1)
+    :custom (doom-modeline-height 10))
+#+END_src
+** Ivy
+#+BEGIN_SRC emacs-lisp
+  (use-package swiper)
+  (use-package counsel)  
+  (use-package ivy
+    :diminish
+    :bind (("C-s" . swiper)
+	   :map ivy-minibuffer-map
+	   ("TAB" . ivy-alt-done))
+    :config
+    (ivy-mode 1))
+#+END_SRC
+
+

@@ -10,30 +10,54 @@
   (menu-bar-mode 0) ;; No menubar
   (setq visual-bell t) ;; No yelling please
   (set-fringe-mode 10) ;; Breathing room
-  (set-frame-parameter (selected-frame) 'alpha '(90 . 95))
-  (add-to-list 'default-frame-alist '(alpha . (90 . 95)))  
-#+END_SRC
+  (display-time-mode)
 
+  (global-visual-line-mode t)
+
+  (set-frame-parameter (selected-frame) 'alpha '(90 . 95))
+  (add-to-list 'default-frame-alist '(alpha . (90 . 95)))
+#+END_SRC
+** Email
+#+begin_src emacs-lisp
+  (autoload 'notmuch "notmuch" "notmuch mail" t)
+  (use-package notmuch
+    :config
+    (setq mail-host-address "gmail.com")
+    (setq mail-user-agent 'message-user-agent)
+     (setq user-mail-address "max.soneryd@gmail.com"
+           user-full-name "Max Soneryd")
+     (setq smtpmail-smtp-server "smtp.gmail.com"
+           message-send-mail-function 'message-smtpmail-send-it)   
+     (setq smtpmail-debug-info t)
+     (setq message-default-mail-headers "Cc: \nBcc: \n")
+     (setq message-auto-save-directory "~/.mail/draft")
+     (setq message-kill-buffer-on-exit t)
+     (setq message-directory "~/.mail/")
+     (setq notmuch-search-oldest-first nil))
+#+end_src
 ** Package Sources
 #+BEGIN_SRC emacs-lisp
   ;; Initialize package sources
   (require 'package)
-  (setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                           ("org" . "https://orgmode.org/elpa/")
-                           ("elpa" . "https://elpa.gnu.org/packages")))
-  
+  (add-to-list 'package-archives '("melpa" . "http://melpa.org/packages/") t)
+
   (package-initialize)
   (unless package-archive-contents
     (package-refresh-contents))
-  
+
   ;; Initialze use-package
   (unless (package-installed-p 'use-package)
     (package-install 'use-package))
-  
+
   (require 'use-package)
   (setq use-package-always-ensure t)
 #+END_SRC
 
+** Backup
+#+begin_src emacs-lisp
+  (setq backup-directory-alist `(("." . "~/.emacs.d/backup")))
+  (setq backup-by-copying t)
+#+end_src
 ** Doom
 #+BEGIN_SRC emacs-lisp
   (use-package doom-modeline
@@ -41,18 +65,21 @@
     :custom (doom-modeline-height 10))
   
   (use-package doom-themes
-    :init (load-theme 'doom-moonlight t))
+    :init (load-theme 'doom-sourcerer t))
 #+END_src
 
 ** Line numbers
 #+BEGIN_SRC emacs-lisp
-  (column-number-mode)
-  (global-display-line-numbers-mode t)
-  (dolist (mode '(org-mode-hook
-                  term-mode-hook
-                  eshell-mode-hook
-                  emms-playlist-mode-hook))
-    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+      (column-number-mode)
+      (global-display-line-numbers-mode t)
+      (dolist (mode '(org-mode-hook
+                      org-agenda-mode-hook
+                      term-mode-hook
+                      eshell-mode-hook
+                      emms-playlist-mode-hook
+                      eww-mode-hook
+                      notmuch-hello-mode-hook))
+        (add-hook mode (lambda () (display-line-numbers-mode 0))))
 #+END_SRC 
 
 ** Ivy
@@ -75,6 +102,7 @@
     :bind (("M-x" . counsel-M-x)
            ("C-x b" . counsel-ibuffer)
            ("C-x C-f" . counsel-find-file)
+           ("C-x C-b" . counsel-bookmark)
            :map minibuffer-local-map
            ("C-r" . 'counsel-minibuffer-history))
     :config
@@ -92,7 +120,24 @@
 #+END_SRC
 
 * Programming
-*** Elisp
+** lsp
+#+begin_src emacs-lisp
+  (use-package lsp-mode :commands lsp :ensure t
+    :config (setq gc-cons-threshold (* 100 1024 1024)
+                  read-process-output-max (* 1024 1024)
+                  treemacs-space-between-root-nodes nil
+                  company-idle-delay 0.2
+                  company-minimum-prefix-length 1
+                  lsp-enable-on-type-formatting nil
+                  ;;lsp-idle-delay 0.1 ;; clangd is fast
+                  ;;lsp-headerline-breadcrumb-enable t)
+                  )
+  )
+
+
+  (use-package lsp-ui :commands lsp-ui-mode)
+#+end_src
+** Elisp
 #+BEGIN_SRC emacs-lisp
   (use-package helpful
     :custom
@@ -105,11 +150,37 @@
     ([remap describe-key] . helpful-key))
 #+END_SRC
 
-*** Rainbow Delimiters
-#+BEGIN_SRC emacs-lisp
-  ;;  (use-package rainbow-delimiters
-  ;;    :hook (prog-mode . rainbow-delimiters-mode))  
-#+END_SRC
+** Company
+#+begin_src emacs-lisp
+    (use-package company
+      :init 
+      (setq company-idle-delay 0)
+      (setq company-dabbrev-downcase 0)
+      (setq company-minimum-prefix-length 1)
+      :hook (prog-mode . company-mode)
+      :config
+      (delete 'company-dabbrev company-backends)
+      )
+#+end_src
+
+** slime
+#+begin_src emacs-lisp
+  (use-package slime
+    :config
+    (setq inferior-lisp-program "sbcl"))
+#+end_src
+
+** ccls
+#+begin_src emacs-lisp
+  (use-package ccls
+    :ensure t
+    :config
+    (setq ccls-executable "ccls")
+    (setq lsp-prefer-flymake nil)
+    (setq-default flycheck-disabled-checkers '(c/c++-clang c/c++-cppcheck c/c++-gcc))
+    :hook ((c-mode c++-mode objc-mode) .
+           (lambda () (require 'ccls) (lsp))))
+#+end_src
 
 * Packages
 ** Which-key
@@ -120,48 +191,112 @@
     :config
     (setq which-key-idle-delay 0.5))
 #+END_SRC
-
-* Packages
+** Hydra
+#+BEGIN_SRC emacs-lisp
+  (use-package hydra)
+  (use-package use-package-hydra)
+#+END_SRC
 ** Emms
 #+BEGIN_SRC emacs-lisp
-  (require 'emms-setup)
-  (emms-standard)
-  (emms-default-players)
-  (advice-add 'emms-mode-line-playlist-current
-              :filter-return #'file-name-nondirectory)
-  
-  (require 'emms-player-mplayer)
-  (setq emms-player-list '(emms-player-mplayer))
-  (setq emms-player-mplayer-parameters '("-novideo" "-slave"))  
-#+END_src
-   
+  (use-package emms
+    :config
+    (emms-all)
+    (emms-default-players)  
+    (setq emms-player-list '(emms-player-mplayer))
+    (setq emms-player-mplayer-parameters '("-novideo" "-slave")))
+#+END_SRC
 ** Org
 #+BEGIN_SRC emacs-lisp
   (use-package org
     :config
-    (setq org-ellipsis " ▼"))
-  
+    (setq org-ellipsis " ▼")
+    (setq org-agenda-files '("~/.emacs.d/agenda/Tasks.org"))
+    (setq org-log-done 'time)
+    (setq org-agenda-start-with-log-mode t)
+    (setq org-refile-targets
+          '(("Tasks.org" :maxlevel . 1)))
+    (advice-add 'org-refile :after 'org-save-all-org-buffers)
+    (setq org-capture-templates
+          `(("t" "Tasks")
+            ("tt" "Task" entry (file+olp "~/.emacs.d/agenda/Tasks.org" "Active")
+             "* TODO %?\n %U\n %a\n %i" :empty-lines 1)))
+    (require 'org-tempo)
+    :after hydra
+    :bind ("C-c o" . hydra-org/body)
+    :hydra (hydra-org (:hint nil)
+                      "
+      _a_: agenda _c_: capture"
+                      ("a" org-agenda-list)
+                      ("c" org-capture)))
+
   (use-package org-bullets
     :after org
     :hook 
     (org-mode . org-bullets-mode)
     :custom
     (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
-  
+
   (dolist (face '((org-level-1 . 1.2)
                   (org-level-2 . 1.1)
                   (org-level-3 . 1.05)
                   (org-level-4 . 1.0)
                   (org-level-5 . 1.1)))
     (set-face-attribute (car face) nil :font "Cantarell" :weight 'regular :height (cdr face)))
-  
+
+  (use-package org-pdftools
+    :config
+    (add-to-list 'org-file-apps 
+                 '("\\.pdf\\'" . (lambda (file link)
+                                   (org-pdftools-open link)))))
+
   (defun snrd/org-mode-visual-fill ()
     (setq visual-fill-column-width 100
           visual-fill-column-center-text t)
     (visual-fill-column-mode 1)
     (visual-line-mode 1)
     (org-indent-mode 1))
-  
+
+  (defun snrd/eww-mode-visual-fill ()
+    (setq visual-fill-column-width 120
+          visual-fill-column-center-text t)
+    (visual-fill-column-mode 1)
+    (visual-line-mode 1))
+
   (use-package visual-fill-column
-    :hook (org-mode . snrd/org-mode-visual-fill))
+    :hook
+    (org-mode . snrd/org-mode-visual-fill)
+    (eww-mode . snrd/eww-mode-visual-fill))
+#+END_SRC
+
+** Eye-browse
+#+BEGIN_SRC emacs-lisp
+  (use-package eyebrowse
+    :bind (("<f1>" . eyebrowse-switch-to-window-config-1)
+           ("<f2>" . eyebrowse-switch-to-window-config-2)	 
+           ("<f3>" . eyebrowse-switch-to-window-config-3)	 
+           ("<f4>" . eyebrowse-switch-to-window-config-4))
+    :config
+    (eyebrowse-mode))  
+#+END_SRC
+
+** Projectile
+#+BEGIN_SRC emacs-lisp
+  (use-package projectile
+    :diminish projectile-mode
+    :config (projectile-mode)
+    :bind-keymap
+    ("C-c p" . projectile-command-map)
+    :init
+    (when (file-directory-p "~/documents/programming/")
+      (setq projectile-project-search-path '("~/documents/programming/")))
+    (setq projectile-switch-project-action #'projectile-dired))
+#+END_SRC
+
+** pdf-tools
+#+BEGIN_SRC emacs-lisp
+  (use-package pdf-tools
+    :load-path "site-lisp/pdf-tools/lisp"
+    ;;:magic ("%PDF" . pdf-view-mode)
+    :config
+    (pdf-tools-install :no-query))
 #+END_SRC
